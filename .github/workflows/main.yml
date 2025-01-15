@@ -45,12 +45,12 @@ jobs:
     - name: build
       run: |
       
-        nvcc -g -maxrregcount 128 --resource-usage -lineinfo -Xptxas -lineinfo -v -O3 -arch=all -m=64 main.cu -o $(REPO_NAME)-cuda.exe -diag-suppress 177 -ID:\a\$(REPO_NAME)\$(REPO_NAME)\boinc\ -ID:\a\$(REPO_NAME)\$(REPO_NAME)\boinc\win\ -LD:\a\$(REPO_NAME)\$(REPO_NAME)\boinc\lib\win\ -lboinc_api -lboinc -lcuda -luser32 -DBOINC -D_WIN32 -allow-unsupported-compiler
+        nvcc -g -maxrregcount 128 --resource-usage -lineinfo -Xptxas -lineinfo -v -O3 -arch=all -m=64 main.cu -o ${{ github.event.repository.name }}-cuda.exe -diag-suppress 177 -ID:\a\${{ github.event.repository.name }}\${{ github.event.repository.name }}\boinc\ -ID:\a\${{ github.event.repository.name }}\${{ github.event.repository.name }}\boinc\win\ -LD:\a\${{ github.event.repository.name }}\${{ github.event.repository.name }}\boinc\lib\win\ -lboinc_api -lboinc -lcuda -luser32 -DBOINC -D_WIN32 -allow-unsupported-compiler
         dir
     - uses: actions/upload-artifact@v3
       with:
-       name: $(REPO_NAME)-cuda-win
-       path: .\$(REPO_NAME)*.exe
+       name: ${{ github.event.repository.name }}-cuda-win
+       path: .\${{ github.event.repository.name }}*.exe
   linux_cuda:
     name: cuda/release/linux
     runs-on: [ubuntu-latest]
@@ -60,10 +60,10 @@ jobs:
     - name: build
       run: |
         nvcc -g -maxrregcount 128 --resource-usage -lineinfo -Xptxas -lineinfo -v -O3 -arch=all \
-        main.cu -m64 -o $(REPO_NAME)-cuda \
+        main.cu -m64 -o ${{ github.event.repository.name }}-cuda \
         -DBOINC -Iboinc/ -Lboinc/lib/lin -lcuda -lboinc_api -lboinc -Xptxas -v
         ls -la
     - uses: actions/upload-artifact@v3
       with:
-       name: $(REPO_NAME)-cuda-lin
-       path: ./$(REPO_NAME)-cuda*
+       name: ${{ github.event.repository.name }}-cuda-lin
+       path: ./${{ github.event.repository.name }}-cuda*
