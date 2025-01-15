@@ -303,6 +303,10 @@ using namespace std::chrono;
 
 #endif
 
+/*
+    You can add anything you want to checkpoint_vars.
+    Be sure to update the checkpointing sections below to reflect the new item in the struct (to save the data into the struct and then to disk)
+*/
 struct checkpoint_vars {
     unsigned long long offset;
     uint64_t elapsed_chkpoint;
@@ -311,6 +315,14 @@ struct checkpoint_vars {
 uint64_t elapsed_chkpoint = 0;
 
 int main(int argc, char **argv) {
+
+    /*
+        The way this has been written, each loop, it calls 32768 * 32 (1048576) kernel threads that each individually run a single seed.
+        We refer to these loops as "blocks" of seeds in this code.
+        --start defines the starting block (--start 0 begins at seed 0, --start 1 begins at seed 1048576, --start 2 begins at 2097152)
+        --end defines the ending block (--end 0 finishes at seed 0, --end 1 finishes at seed 1048576, --end 3 begins at seed 2097152)
+        --device defines which GPU ID runs the cuda kernels. You can check this using nvidia-smi if you're running standalone. Otherwise, if you're running on BOINC, this parameter is unneeded on modern clients. Keep it implemented for old clients.
+    */
     uint64_t block_min = 0;
     uint64_t block_max = 0;
     uint64_t checked = 0;
@@ -335,6 +347,7 @@ int main(int argc, char **argv) {
 	int threads = 32;
     //BOINC
   	#ifdef BOINC
+
         BOINC_OPTIONS options;
         boinc_options_defaults(options);
 	    options.normal_thread_priority = true;
@@ -342,17 +355,21 @@ int main(int argc, char **argv) {
         APP_INIT_DATA aid;
 	    boinc_get_init_data(aid);
         if (aid.gpu_device_num >= 0) {
+            //If BOINC client provided us a device ID
 		    device = aid.gpu_device_num;
 		    fprintf(stderr,"boinc gpu %i gpuindex: %i \n", aid.gpu_device_num, device);
 		} else {
+            //If BOINC client did not provide us a device ID
             device = -5;
             for (int i = 1; i < argc; i += 2) {
+                //Check for a --device flag, just in case we missed it earlier, use it if it's available. For older clients primarily.
               	if(strcmp(argv[i], "--device") == 0){
                     sscanf(argv[i + 1], "%i", &device);
                 }
   
             }
             if(device == -5){
+                //Something has gone wrong. It pulled from BOINC, got -1. No --device parameter present.
                 fprintf(stderr, "Error: No --device parameter provided! Defaulting to device 0...\n");
                 device = 0;
             }
@@ -361,10 +378,12 @@ int main(int argc, char **argv) {
 
         FILE *checkpoint_data = boinc_fopen("checkpoint.txt", "rb");
         if(!checkpoint_data){
+            //No checkpoint file was found. Proceed from the beginning.
             fprintf(stderr, "No checkpoint to load\n");
 
         }
         else{
+            //Load from checkpoint. You can put any data in data_store that you need to keep between runs of this program.
             boinc_begin_critical_section();
             struct checkpoint_vars data_store;
             fread(&data_store, sizeof(data_store), 1, checkpoint_data);
@@ -429,7 +448,9 @@ int main(int argc, char **argv) {
     }
 
 
-    //time_t end = time(NULL);
+    /*
+        The end. This prints speed information to stderr.txt - which will be uploaded to the BOINC server, or it can be reviewed locally in a standsalone run.
+    */
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end - start);
     checked = blocks*threads*(block_max - block_min);
